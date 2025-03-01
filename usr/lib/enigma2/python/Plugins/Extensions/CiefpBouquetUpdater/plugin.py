@@ -12,7 +12,7 @@ from Screens.Screen import Screen
 from Tools.Directories import fileExists
 from enigma import eDVBDB
 
-PLUGIN_VERSION = "1.1"
+PLUGIN_VERSION = "1.2"
 PLUGIN_ICON = "icon.png"
 PLUGIN_NAME = "CiefpBouquetUpdater"
 TMP_DOWNLOAD = "/tmp/ciefp-E2-75E-34W"
@@ -23,15 +23,15 @@ STATIC_NAMES = ["ciefp-E2-75E-34W"]
 
 class CiefpBouquetUpdater(Screen):
     skin = """
-        <screen position="center,center" size="1400,600" title="..:: Ciefp Bouquet Updater ::..    (Version{version})">
-            <widget name="left_list" position="0,0" size="520,500" scrollbarMode="showOnDemand" itemHeight="33" font="Regular;28" />
-            <widget name="right_list" position="530,0" size="500,500" scrollbarMode="showOnDemand" itemHeight="33" font="Regular;28" />
-            <widget name="background" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/CiefpBouquetUpdater/background.png" position="1040,0" size="360,600" />
-            <widget name="status" position="0,510" size="840,50" font="Regular;24" />
-            <widget name="green_button" position="0,550" size="150,35" font="Bold;28" halign="center" backgroundColor="#1F771F" foregroundColor="#000000" />
-            <widget name="yellow_button" position="170,550" size="150,35" font="Bold;28" halign="center" backgroundColor="#9F9F13" foregroundColor="#000000" />
-            <widget name="red_button" position="340,550" size="150,35" font="Bold;28" halign="center" backgroundColor="#9F1313" foregroundColor="#000000" />
-            <widget name="version_info" position="510,550" size="480,40" font="Regular;20" foregroundColor="#FFFFFF" />
+        <screen position="center,center" size="1400,800" title="..:: Ciefp Bouquet Updater ::..    (Version{version})">
+            <widget name="left_list" position="0,0" size="520,700" scrollbarMode="showOnDemand" itemHeight="33" font="Regular;28" />
+            <widget name="right_list" position="530,0" size="500,700" scrollbarMode="showOnDemand" itemHeight="33" font="Regular;28" />
+            <widget name="background" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/CiefpBouquetUpdater/background.png" position="1040,0" size="360,800" />
+            <widget name="status" position="0,710" size="840,50" font="Regular;24" />
+            <widget name="green_button" position="0,750" size="150,35" font="Bold;28" halign="center" backgroundColor="#1F771F" foregroundColor="#000000" />
+            <widget name="yellow_button" position="170,750" size="150,35" font="Bold;28" halign="center" backgroundColor="#9F9F13" foregroundColor="#000000" />
+            <widget name="red_button" position="340,750" size="150,35" font="Bold;28" halign="center" backgroundColor="#9F1313" foregroundColor="#000000" />
+            <widget name="version_info" position="510,750" size="480,40" font="Regular;20" foregroundColor="#FFFFFF" />
         </screen>
     """.format(version=PLUGIN_VERSION)
 
@@ -216,12 +216,10 @@ class CiefpBouquetUpdater(Screen):
             return
 
         enigma2_dir = "/etc/enigma2"
-        tuxbox_dir = "/etc/tuxbox"
         installed_files = []
 
-        # Lista zajedničkih fajlova za kopiranje
+        # Lista zajedničkih fajlova za kopiranje (izbačen satellites.xml)
         common_files = {
-            'satellites.xml': tuxbox_dir,  # satellites.xml ide u /etc/tuxbox
             'lamedb': enigma2_dir  # lamedb ide u /etc/enigma2
         }
 
@@ -238,7 +236,7 @@ class CiefpBouquetUpdater(Screen):
                     self.session.open(MessageBox, f"Failed to install {bouquet}: {str(e)}", MessageBox.TYPE_ERROR)
                     return
 
-        # Kopiranje zajedničkih fajlova
+        # Kopiranje zajedničkog fajla lamedb
         for file_name, target_dir in common_files.items():
             source_path = os.path.join(TMP_DOWNLOAD, file_name)
             destination_path = os.path.join(target_dir, file_name)
