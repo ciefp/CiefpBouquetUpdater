@@ -12,7 +12,7 @@ from Screens.Screen import Screen
 from Tools.Directories import fileExists
 from enigma import eDVBDB
 
-PLUGIN_VERSION = "1.2"
+PLUGIN_VERSION = "1.3"
 PLUGIN_ICON = "icon.png"
 PLUGIN_NAME = "CiefpBouquetUpdater"
 TMP_DOWNLOAD = "/tmp/ciefp-E2-75E-34W"
@@ -23,10 +23,10 @@ STATIC_NAMES = ["ciefp-E2-75E-34W"]
 
 class CiefpBouquetUpdater(Screen):
     skin = """
-        <screen position="center,center" size="1400,800" title="..:: Ciefp Bouquet Updater ::..    (Version{version})">
-            <widget name="left_list" position="0,0" size="520,700" scrollbarMode="showOnDemand" itemHeight="33" font="Regular;28" />
-            <widget name="right_list" position="530,0" size="500,700" scrollbarMode="showOnDemand" itemHeight="33" font="Regular;28" />
-            <widget name="background" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/CiefpBouquetUpdater/background.png" position="1040,0" size="360,800" />
+        <screen position="center,center" size="1600,800" title="..:: Ciefp Bouquet Updater ::..    (Version{version})">
+            <widget name="left_list" position="0,0" size="620,700" scrollbarMode="showOnDemand" itemHeight="33" font="Regular;28" />
+            <widget name="right_list" position="630,0" size="610,700" scrollbarMode="showOnDemand" itemHeight="33" font="Regular;28" />
+            <widget name="background" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/CiefpBouquetUpdater/background.png" position="1240,0" size="360,800" />
             <widget name="status" position="0,710" size="840,50" font="Regular;24" />
             <widget name="green_button" position="0,750" size="150,35" font="Bold;28" halign="center" backgroundColor="#1F771F" foregroundColor="#000000" />
             <widget name="yellow_button" position="170,750" size="150,35" font="Bold;28" halign="center" backgroundColor="#9F9F13" foregroundColor="#000000" />
@@ -38,7 +38,8 @@ class CiefpBouquetUpdater(Screen):
     def __init__(self, session):
         Screen.__init__(self, session)
         self.session = session
-        self.selected_bouquets = []
+        self.selected_bouquets = []  # Lista selektovanih naziva buketa
+        self.bouquet_names = {}  # Mapiranje naziva na fajlove
         self["left_list"] = MenuList([])
         self["right_list"] = MenuList([])
         self["background"] = Pixmap()
@@ -46,7 +47,7 @@ class CiefpBouquetUpdater(Screen):
         self["green_button"] = Label("Copy")
         self["yellow_button"] = Label("Install")
         self["red_button"] = Label("Exit")
-        self["version_info"] = Label("")  # Stalno prikazivanje verzije
+        self["version_info"] = Label("")
         self["actions"] = ActionMap(["OkCancelActions", "ColorActions"], {
             "ok": self.select_item,
             "cancel": self.exit,
@@ -65,13 +66,11 @@ class CiefpBouquetUpdater(Screen):
             response = requests.get(GITHUB_API_URL)
             response.raise_for_status()
             files = response.json()
-
             for file in files:
                 if any(name in file["name"] for name in STATIC_NAMES) and file["name"].endswith(".zip"):
-                    version_with_date = file["name"].replace(".zip", "")  # Izvlačenje naziva verzije i datuma
+                    version_with_date = file["name"].replace(".zip", "")
                     self["version_info"].setText(f"Version: ({version_with_date})")
                     return
-
             self["version_info"].setText(f"Version: (Date not available)")
         except Exception as e:
             self["version_info"].setText(f"Version: (Error fetching date)")
@@ -79,11 +78,9 @@ class CiefpBouquetUpdater(Screen):
     def download_settings(self):
         self["status"].setText("Fetching file list from GitHub...")
         try:
-            # Query GitHub API for available files
             response = requests.get(GITHUB_API_URL)
-            response.raise_for_status()  # Raise error for bad response
+            response.raise_for_status()
             files = response.json()
-            # Find desired ZIP file
             zip_url = None
             for file in files:
                 if any(name in file["name"] for name in STATIC_NAMES) and file["name"].endswith(".zip"):
@@ -91,13 +88,11 @@ class CiefpBouquetUpdater(Screen):
                     break
             if not zip_url:
                 raise Exception("No matching ZIP file found on GitHub.")
-            # Download ZIP file
             self["status"].setText("Downloading settings from GitHub...")
             zip_path = os.path.join("/tmp", "latest.zip")
             zip_response = requests.get(zip_url)
             with open(zip_path, 'wb') as f:
                 f.write(zip_response.content)
-            # Extract ZIP file
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                 temp_extract_path = "/tmp/temp_extract"
                 if not os.path.exists(temp_extract_path):
@@ -112,41 +107,77 @@ class CiefpBouquetUpdater(Screen):
         except Exception as e:
             self["status"].setText(f"Error: {str(e)}")
 
+    def parse_satellites(self):
+        pass  # Ova funkcija nije implementirana u originalnom kodu, ostavljena kao placeholder
+
     def load_bouquets(self):
-        bouquets_file = os.path.join(TMP_DOWNLOAD, "bouquets.tv")
-        if not fileExists(bouquets_file):
+        self.bouquet_names = {}  # Rečnik: {puna_linija: ime_fajla}
+        bouquet_dir = TMP_DOWNLOAD
+        bouquets_file = os.path.join(bouquet_dir, "bouquets.tv")
+
+        if not os.path.exists(bouquet_dir):
+            self["status"].setText("Error: Temporary directory not found!")
+            return
+
+        # Čitanje redosleda iz bouquets.tv
+        bouquet_order = []
+        if fileExists(bouquets_file):
+            with open(bouquets_file, 'r', encoding='utf-8') as file:
+                for line in file:
+                    if "FROM BOUQUET" in line:
+                        start = line.find('"') + 1
+                        end = line.find('"', start)
+                        if start != -1 and end != -1:
+                            bouquet_file = line[start:end]
+                            bouquet_order.append(bouquet_file)
+        else:
             self["status"].setText("Error: bouquets.tv not found!")
             return
-        with open(bouquets_file, 'r') as file:
-            bouquets = []
-            for line in file:
-                if "FROM BOUQUET" in line:
-                    start = line.find('"') + 1
-                    end = line.find('"', start)
-                    if start != -1 and end != -1:
-                        bouquet_name = line[start:end]
-                        bouquets.append(bouquet_name)
-            self["left_list"].setList(bouquets)
-            self["status"].setText("Bouquets loaded successfully.")
+
+        # Skeniranje .tv fajlova i izvlačenje naziva
+        bouquet_display_list = []
+        name_to_file = {}
+
+        for bouquet_file in bouquet_order:
+            file_path = os.path.join(bouquet_dir, bouquet_file)
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        first_line = f.readline().strip()
+                        if first_line.startswith("#NAME"):
+                            display_name = first_line.replace("#NAME", "", 1).strip()  # Uklanjamo #NAME
+                            self.bouquet_names[first_line] = bouquet_file
+                            name_to_file[bouquet_file] = display_name
+                except Exception as e:
+                    self["status"].setText(f"Error reading {bouquet_file}: {str(e)}")
+                    return
+
+        # Popunjavanje liste prema redosledu iz bouquets.tv
+        for bouquet_file in bouquet_order:
+            if bouquet_file in name_to_file:
+                bouquet_display_list.append(name_to_file[bouquet_file])
+
+        if not bouquet_display_list:
+            self["status"].setText("No valid bouquet files found!")
+            return
+
+        self["left_list"].setList(bouquet_display_list)
+        self["status"].setText("Bouquets loaded successfully.")
 
     def select_item(self):
-        selected = self["left_list"].getCurrent()
-        if selected:
-            if selected in self.selected_bouquets:
-                self.selected_bouquets.remove(selected)
+        selected_name = self["left_list"].getCurrent()
+        if selected_name:
+            if selected_name in self.selected_bouquets:
+                self.selected_bouquets.remove(selected_name)
             else:
-                self.selected_bouquets.append(selected)
+                self.selected_bouquets.append(selected_name)
             self["right_list"].setList(self.selected_bouquets)
 
     def copy_files(self):
-        """
-        Kopira selektovane bukete u ciljni direktorijum i ažurira bouquets.tv.
-        """
         if not self.selected_bouquets:
             self["status"].setText("No bouquets selected!")
             return
 
-        # Ciljni direktorijum
         target_dir = TMP_SELECTED
         if not os.path.exists(target_dir):
             try:
@@ -155,34 +186,35 @@ class CiefpBouquetUpdater(Screen):
                 self["status"].setText("Permission denied: Unable to create directory.")
                 return
 
-        # Kopiranje fajlova
         copied_files = []
-        for bouquet in self.selected_bouquets:
-            source_path = os.path.join(TMP_DOWNLOAD, bouquet)
-            destination_path = os.path.join(target_dir, bouquet)
+        for bouquet_name in self.selected_bouquets:
+            bouquet_file = next((f for l, f in self.bouquet_names.items() if bouquet_name in l), None)
+            if not bouquet_file:
+                continue
+            source_path = os.path.join(TMP_DOWNLOAD, bouquet_file)
+            destination_path = os.path.join(target_dir, bouquet_file)
 
             if os.path.exists(source_path):
                 try:
                     shutil.copy(source_path, destination_path)
-                    copied_files.append(bouquet)
+                    copied_files.append(bouquet_file)
                 except Exception as e:
-                    self["status"].setText(f"Error copying {bouquet}: {str(e)}")
+                    self["status"].setText(f"Error copying {bouquet_file}: {str(e)}")
                     return
 
-        # Ažuriranje bouquets.tv
         bouquets_tv_path = os.path.join('/etc/enigma2', 'bouquets.tv')
         if os.path.exists(bouquets_tv_path):
             with open(bouquets_tv_path, 'r') as f:
                 lines = f.readlines()
 
             updated = False
-            for bouquet in copied_files:
-                if not any(bouquet in line for line in lines):
+            for bouquet_file in copied_files:
+                if not any(bouquet_file in line for line in lines):
                     tmp_bouquets_tv = os.path.join(TMP_DOWNLOAD, 'bouquets.tv')
                     if os.path.exists(tmp_bouquets_tv):
                         with open(tmp_bouquets_tv, 'r') as f:
                             for line in f:
-                                if bouquet in line:
+                                if bouquet_file in line:
                                     lines.append(line)
                                     updated = True
                                     break
@@ -209,34 +241,35 @@ class CiefpBouquetUpdater(Screen):
         )
 
     def install_confirmed(self, result):
-        """
-        Potvrda instalacije selektovanih buketa i zajedničkih fajlova.
-        """
         if not result:
             return
 
         enigma2_dir = "/etc/enigma2"
         installed_files = []
 
-        # Lista zajedničkih fajlova za kopiranje (izbačen satellites.xml)
         common_files = {
-            'lamedb': enigma2_dir  # lamedb ide u /etc/enigma2
+            'lamedb': enigma2_dir
         }
 
-        # Kopiranje selektovanih buketa
-        for bouquet in self.selected_bouquets:
-            source_path = os.path.join(TMP_SELECTED, bouquet)
-            destination_path = os.path.join(enigma2_dir, bouquet)
+        # Kopiranje selektovanih buketa uz brisanje starih fajlova
+        for bouquet_name in self.selected_bouquets:
+            bouquet_file = next((f for l, f in self.bouquet_names.items() if bouquet_name in l), None)
+            if not bouquet_file:
+                continue
+            source_path = os.path.join(TMP_SELECTED, bouquet_file)
+            destination_path = os.path.join(enigma2_dir, bouquet_file)
 
             if os.path.exists(source_path):
                 try:
+                    if os.path.exists(destination_path):
+                        os.remove(destination_path)  # Briše stari fajl pre kopiranja
                     shutil.copy(source_path, destination_path)
-                    installed_files.append(bouquet)
+                    installed_files.append(bouquet_file)
                 except Exception as e:
-                    self.session.open(MessageBox, f"Failed to install {bouquet}: {str(e)}", MessageBox.TYPE_ERROR)
+                    self.session.open(MessageBox, f"Failed to install {bouquet_file}: {str(e)}", MessageBox.TYPE_ERROR)
                     return
 
-        # Kopiranje zajedničkog fajla lamedb
+        # Kopiranje zajedničkih fajlova uz brisanje starih
         for file_name, target_dir in common_files.items():
             source_path = os.path.join(TMP_DOWNLOAD, file_name)
             destination_path = os.path.join(target_dir, file_name)
@@ -244,12 +277,13 @@ class CiefpBouquetUpdater(Screen):
             if os.path.exists(source_path):
                 try:
                     if not os.path.exists(target_dir):
-                        os.makedirs(target_dir)  # Kreiranje direktorijuma ako ne postoji
+                        os.makedirs(target_dir)
+                    if os.path.exists(destination_path):
+                        os.remove(destination_path)  # Briše stari lamedb pre kopiranja
                     shutil.copy(source_path, destination_path)
                     installed_files.append(file_name)
                 except Exception as e:
-                    self.session.open(MessageBox, f"Failed to copy common file {file_name}: {str(e)}",
-                                      MessageBox.TYPE_ERROR)
+                    self.session.open(MessageBox, f"Failed to copy common file {file_name}: {str(e)}", MessageBox.TYPE_ERROR)
                     return
 
         if installed_files:
