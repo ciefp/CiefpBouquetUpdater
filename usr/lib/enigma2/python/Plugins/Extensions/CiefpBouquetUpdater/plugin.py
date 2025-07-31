@@ -12,7 +12,7 @@ from Screens.Screen import Screen
 from Tools.Directories import fileExists
 from enigma import eDVBDB
 
-PLUGIN_VERSION = "1.3"
+PLUGIN_VERSION = "1.4"
 PLUGIN_ICON = "icon.png"
 PLUGIN_NAME = "CiefpBouquetUpdater"
 TMP_DOWNLOAD = "/tmp/ciefp-E2-75E-34W"
@@ -28,9 +28,9 @@ class CiefpBouquetUpdater(Screen):
             <widget name="right_list" position="630,0" size="610,700" scrollbarMode="showOnDemand" itemHeight="33" font="Regular;28" />
             <widget name="background" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/CiefpBouquetUpdater/background.png" position="1240,0" size="360,800" />
             <widget name="status" position="0,710" size="840,50" font="Regular;24" />
-            <widget name="green_button" position="0,750" size="150,35" font="Bold;28" halign="center" backgroundColor="#1F771F" foregroundColor="#000000" />
-            <widget name="yellow_button" position="170,750" size="150,35" font="Bold;28" halign="center" backgroundColor="#9F9F13" foregroundColor="#000000" />
-            <widget name="red_button" position="340,750" size="150,35" font="Bold;28" halign="center" backgroundColor="#9F1313" foregroundColor="#000000" />
+            <widget name="red_button" position="0,750" size="150,35" font="Bold;28" halign="center" backgroundColor="#9F1313" foregroundColor="#000000" />
+            <widget name="green_button" position="170,750" size="150,35" font="Bold;28" halign="center" backgroundColor="#1F771F" foregroundColor="#000000" />
+            <widget name="yellow_button" position="340,750" size="150,35" font="Bold;28" halign="center" backgroundColor="#9F9F13" foregroundColor="#000000" />
             <widget name="version_info" position="510,750" size="480,40" font="Regular;20" foregroundColor="#FFFFFF" />
         </screen>
     """.format(version=PLUGIN_VERSION)
