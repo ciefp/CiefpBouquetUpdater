@@ -5,7 +5,7 @@
 **Plugin Name:** CiefpBouquetUpdater  
 **Supported platforms:** OpenATV, OpenBH, VTI, Egami, OpenPLI, BlackHole, and other Enigma2-based images
 
-![Plugin Screenshot](https://raw.githubusercontent.com/yourusername/CiefpBouquetUpdater/main/bouquetupdater.jpg)
+![Plugin Screenshot](https://raw.githubusercontent.com/ciefp/CiefpBouquetUpdater/main/bouquetupdater.jpg)
 *(Replace with actual screenshot if available)*
 
 ## Description
